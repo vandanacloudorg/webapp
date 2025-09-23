@@ -6,6 +6,8 @@ from .serializers import UserSerializer, ProductSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework import generics, permissions
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+
 
 
 class UserCreateView(generics.CreateAPIView):
@@ -40,14 +42,13 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        # Users can only see their own products
-        return Product.objects.filter(owner=self.request.user)
+    # def get_queryset(self):
+    #     # Users can only see their own products
+    #     return Product.objects.filter(owner=self.request.user)
 
     def perform_update(self, serializer):
-        # Ensure only owner can update
-        if self.get_object().owner != self.request.user:
-            raise PermissionDenied("You do not have permission to edit this product.")
+        if self.request.user != self.get_object().owner:
+            raise PermissionDenied("You can only update your own products.")
         serializer.save()
 
     def perform_destroy(self, instance):

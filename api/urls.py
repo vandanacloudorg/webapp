@@ -3,7 +3,7 @@ from .views import UserCreateView, UserSelfView, ProductCreateView, ProductDetai
 
 urlpatterns = [
     path('v1/user/', UserCreateView.as_view(), name='user-create'),
-    path('v1/user/self/', UserSelfView.as_view(), name='user-self'),
+    path('v1/user/self/', UserSelfView.as_view(), name='user-detail'),
 
     #Product endpoints
     path('v1/product/', ProductCreateView.as_view(), name='product-create'),

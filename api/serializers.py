@@ -37,3 +37,13 @@ class ProductSerializer(serializers.ModelSerializer):
             'quantity', 'date_added', 'date_updated', 'owner'
         ]
         read_only_fields = ['id', 'date_added', 'date_updated', 'owner']
+
+    def validate_quantity(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Quantity cannot be less than 0.")
+        return value
+
+    def validate_sku(self, value):
+        if Product.objects.filter(sku=value).exclude(id=self.instance.id if self.instance else None).exists():
+            raise serializers.ValidationError("SKU must be unique.")
+        return value

@@ -7,19 +7,29 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'password', 'account_created', 'account_updated']
+        fields = [ 'id', 'email', 'first_name', 'last_name', 'password', 'account_created', 'account_updated']
         read_only_fields = ['id', 'account_created', 'account_updated']
+        extra_kwargs = { 'email': {'required': True}, 'password': {'required': True},'first_name': {'required': True}, 'last_name': {'required': True}, }
+
 
     def create(self, validated_data):
-        # Use Django’s built-in password hashing
+        email = validated_data.get("email")
+        password = validated_data.pop("password", None)
+
+        if not email:
+            raise serializers.ValidationError({"email": "This field is required."})
+        if not password:
+            raise serializers.ValidationError({"password": "This field is required."})
+
         user = User(
-            email=validated_data['email'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name']
+            email=email,
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", "")
         )
-        user.set_password(validated_data['password'])  # hashes password
+        user.set_password(password)   # ✅ always hash password
         user.save()
         return user
+
 
     def update(self, instance, validated_data):
         # Handle password hashing if provided

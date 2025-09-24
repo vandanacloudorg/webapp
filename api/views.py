@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework import generics, permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-
+from rest_framework.exceptions import ValidationError
 
 
 class UserCreateView(generics.CreateAPIView):
@@ -16,10 +16,24 @@ class UserCreateView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        # check if email already exists
-        if User.objects.filter(email=request.data.get('email')).exists():
-            return Response({"error": "User with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
-        return super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data.get('email')
+        if not email:
+            raise ValidationError({"email": "This field is required."})
+
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {"error": "User with this email already exists."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
 
 class UserSelfView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
@@ -27,6 +41,16 @@ class UserSelfView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        # Disallow updates to email or account timestamps
+        disallowed_fields = {"email", "account_created", "account_updated"}
+        if any(field in request.data for field in disallowed_fields):
+            return Response(
+                {"error": "You can only update first_name, last_name, or password."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().update(request, *args, **kwargs)
 
 
 class ProductCreateView(generics.CreateAPIView):

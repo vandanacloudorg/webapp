@@ -37,7 +37,7 @@ class TestUserAPI:
         }
         response = self.client.post("/v1/user/", data, format="json")
         assert response.status_code == 400
-        assert "already exists" in response.data["error"]
+        assert "already exists" in response.data.get("email", [])[0]
 
     def test_get_user_requires_auth(self):
         response = self.client.get("/v1/user/self/")

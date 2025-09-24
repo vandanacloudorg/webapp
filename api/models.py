@@ -65,3 +65,10 @@ class Product(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.sku})"
+
+
+class HealthCheck(models.Model):
+    checked_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"HealthCheck at {self.checked_at}"

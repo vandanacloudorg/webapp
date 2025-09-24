@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, Product
+from .models import User, Product, HealthCheck
 from .serializers import UserSerializer, ProductSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework import generics, permissions
@@ -9,6 +9,34 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
+from django.http import HttpResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.db import DatabaseError
+
+@csrf_exempt
+@require_http_methods(["GET"])  # only allow GET
+def healthz(request):
+    # Reject if request has a body
+    if request.method == "GET" and request.body:
+        return HttpResponse(status=400)
+
+    # Reject if query params are passed
+    if request.GET:
+        return HttpResponse(status=400)
+
+    try:
+        HealthCheck.objects.create()
+        response = HttpResponse(status=200)
+    except DatabaseError:
+        response = HttpResponse(status=503)
+
+    # Required headers
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["X-Content-Type-Options"] = "nosniff"
+
+    return response
 
 class UserCreateView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -89,3 +117,4 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
         if instance.owner != self.request.user:
             raise PermissionDenied("You do not have permission to delete this product.")
         instance.delete()
+

@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import UserCreateView, UserSelfView, ProductCreateView, ProductDetailView
+from rest_framework.authtoken.views import obtain_auth_token
 
 urlpatterns = [
     path('v1/user/', UserCreateView.as_view(), name='user-create'),
@@ -8,4 +9,6 @@ urlpatterns = [
     #Product endpoints
     path('v1/product/', ProductCreateView.as_view(), name='product-create'),
     path('v1/product/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
+
+    path('v1/token/', obtain_auth_token, name='api_token_auth'),
 ]

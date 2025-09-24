@@ -7,8 +7,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework import generics, permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
-
 
 class UserCreateView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -30,8 +30,17 @@ class UserCreateView(generics.CreateAPIView):
             )
 
         self.perform_create(serializer)
+        user = User.objects.get(email=email)
+
+        token, created = Token.objects.get_or_create(user=user)
+
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        response_data = serializer.data
+        response_data["token"] = token.key
+
+        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 
 

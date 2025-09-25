@@ -38,15 +38,11 @@ class UserSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 class ProductSerializer(serializers.ModelSerializer):
-    owner = serializers.ReadOnlyField(source='owner.email')  # showing owner's email, not id
-
     class Meta:
         model = Product
-        fields = [
-            'id', 'name', 'description', 'sku', 'manufacturer',
-            'quantity', 'date_added', 'date_updated', 'owner'
-        ]
-        read_only_fields = ['id', 'date_added', 'date_updated', 'owner']
+        fields = ['id', 'name', 'description', 'sku', 'manufacturer', 'quantity', 'owner', 'date_added']
+        read_only_fields = ['id', 'owner', 'date_added']
+
 
     def validate_quantity(self, value):
         if value < 0:

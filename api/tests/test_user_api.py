@@ -1,8 +1,6 @@
 import pytest
-from django.urls import reverse
 from rest_framework.test import APIClient
 from api.models import User
-
 
 @pytest.mark.django_db
 class TestUserAPI:
@@ -69,3 +67,60 @@ class TestUserAPI:
         user.refresh_from_db()
         assert user.first_name == "New"
         assert user.check_password("newpass")
+
+    def test_user_cannot_update_email(self):
+        user = User.objects.create_user(
+            email="emailchange@example.com",
+            password="testpass",
+            first_name="Email",
+            last_name="Change"
+        )
+        self.client.force_authenticate(user=user)
+        data = {"email": "hacker@example.com"}
+        response = self.client.patch("/v1/user/self/", data, format="json")
+        assert response.status_code == 400
+        assert "You can only update" in response.data["error"]
+
+    def test_user_password_not_exposed(self):
+        user = User.objects.create_user(
+            email="hidden@example.com",
+            password="hiddenpass",
+            first_name="Hidden",
+            last_name="User"
+        )
+        self.client.force_authenticate(user=user)
+        response = self.client.get("/v1/user/self/")
+        assert "password" not in response.data
+
+    def test_put_requires_email_field(self):
+        user = User.objects.create_user(
+            email="puttest@example.com",
+            password="putpass",
+            first_name="Put",
+            last_name="User"
+        )
+        self.client.force_authenticate(user=user)
+        data = {"first_name": "NoEmail"}
+        response = self.client.put("/v1/user/self/", data, format="json")
+        assert response.status_code == 400
+        assert "email" in response.data
+
+    def test_user_can_update_all_allowed_fields(self):
+        user = User.objects.create_user(
+            email="allowed@example.com",
+            password="oldpass",
+            first_name="First",
+            last_name="Last"
+        )
+        self.client.force_authenticate(user=user)
+        data = {
+            "first_name": "UpdatedFirst",
+            "last_name": "UpdatedLast",
+            "password": "newallowedpass"
+        }
+        response = self.client.patch("/v1/user/self/", data, format="json")
+        assert response.status_code == 200
+        user.refresh_from_db()
+        assert user.first_name == "UpdatedFirst"
+        assert user.last_name == "UpdatedLast"
+        assert user.check_password("newallowedpass")

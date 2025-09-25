@@ -2,7 +2,6 @@ import pytest
 from rest_framework.test import APIClient
 from api.models import User, Product
 
-
 @pytest.mark.django_db
 class TestProductAPI:
 
@@ -72,3 +71,57 @@ class TestProductAPI:
         response = self.client.delete(f"/v1/product/{product.id}/")
         assert response.status_code == 204
         assert not Product.objects.filter(id=product.id).exists()
+
+    def test_product_public_access(self):
+        product = Product.objects.create(
+            name="Camera",
+            description="DSLR Camera",
+            sku="CAM2025",
+            manufacturer="Canon",
+            quantity=5,
+            owner=self.user
+        )
+        self.client.logout()  # no authentication
+        response = self.client.get(f"/v1/product/{product.id}/")
+        assert response.status_code == 200
+        assert response.data["name"] == "Camera"
+        assert response.data["manufacturer"] == "Canon"
+
+    def test_update_product_non_owner(self):
+        product = Product.objects.create(
+            name="Speaker",
+            description="Bluetooth Speaker",
+            sku="SPK100",
+            manufacturer="JBL",
+            quantity=4,
+            owner=self.user,
+        )
+        other_user = User.objects.create_user(
+            email="notowner@example.com",
+            password="nopass"
+        )
+        self.client.force_authenticate(user=other_user)
+        response = self.client.patch(
+            f"/v1/product/{product.id}/", {"quantity": 10}, format="json"
+        )
+        assert response.status_code == 403
+        product.refresh_from_db()
+        assert product.quantity == 4
+
+    def test_delete_product_non_owner(self):
+        product = Product.objects.create(
+            name="Keyboard",
+            description="Mechanical Keyboard",
+            sku="KEY500",
+            manufacturer="Logitech",
+            quantity=2,
+            owner=self.user,
+        )
+        other_user = User.objects.create_user(
+            email="hacker@example.com",
+            password="hackpass"
+        )
+        self.client.force_authenticate(user=other_user)
+        response = self.client.delete(f"/v1/product/{product.id}/")
+        assert response.status_code == 403
+        assert Product.objects.filter(id=product.id).exists()
